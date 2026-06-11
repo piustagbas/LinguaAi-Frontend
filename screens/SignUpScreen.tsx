@@ -5,15 +5,17 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
   Alert,
   ScrollView,
   ActivityIndicator,
   BackHandler,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { useFocusEffect } from '@react-navigation/native';
+import { scale, verticalScale, moderateScale } from '../utils/responsive';
 
 interface SignUpScreenProps {
   navigation: any;
@@ -21,8 +23,31 @@ interface SignUpScreenProps {
 }
 
 const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation, route }) => {
-  const { login, register, verifyOTP, resendOTP, forgotPassword, resetPassword, isLoading, pendingEmail, pendingPassword } = useAuth();
+  const { login, register, verifyOTP, resendOTP, forgotPassword, resetPassword, isLoading, pendingEmail, pendingPassword, loginWithGoogle, loginWithApple } = useAuth();
+  const { colors, isDark } = useTheme();
   const [step, setStep] = useState<'signup' | 'login' | 'otp' | 'forgot' | 'reset-code' | 'reset-password'>('signup');
+
+  const handleGoogleSignIn = async () => {
+    try {
+      console.log('🔄 Initiating Google Sign In simulation...');
+      await loginWithGoogle();
+      console.log('✅ Google Sign In simulation completed');
+    } catch (error: any) {
+      console.error('❌ Google Sign In simulation error:', error);
+      Alert.alert('Google Sign In Failed', error.message || 'Please try again');
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    try {
+      console.log('🔄 Initiating Apple Sign In simulation...');
+      await loginWithApple();
+      console.log('✅ Apple Sign In simulation completed');
+    } catch (error: any) {
+      console.error('❌ Apple Sign In simulation error:', error);
+      Alert.alert('Apple Sign In Failed', error.message || 'Please try again');
+    }
+  };
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -194,10 +219,25 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation, route }) => {
     <View style={styles.content}>
       <Text style={styles.title}>Sign Up</Text>
       <Text style={styles.subtitle}>Create your account</Text>
-      <Text style={{ color: 'red', textAlign: 'center', marginBottom: 10 }}>
-        Step: {step}
-      </Text>
+
       
+      <View style={styles.oauthRowContainer}>
+        <TouchableOpacity style={styles.oauthButtonHalf} onPress={handleGoogleSignIn} disabled={isLoading}>
+          <Ionicons name="logo-google" size={20} color="#EA4335" />
+          <Text style={styles.oauthButtonTextHalf}>Google</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.oauthButtonHalf} onPress={handleAppleSignIn} disabled={isLoading}>
+          <Ionicons name="logo-apple" size={20} color="#000000" />
+          <Text style={styles.oauthButtonTextHalf}>Apple</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.dividerContainer}>
+        <View style={styles.dividerLine} />
+        <Text style={styles.dividerText}>or register with email</Text>
+        <View style={styles.dividerLine} />
+      </View>
+
       <View style={styles.inputContainer}>
         <Text style={styles.label}>Name</Text>
         <TextInput
@@ -330,6 +370,23 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation, route }) => {
         )}
       </TouchableOpacity>
 
+      <View style={styles.dividerContainer}>
+        <View style={styles.dividerLine} />
+        <Text style={styles.dividerText}>or continue with</Text>
+        <View style={styles.dividerLine} />
+      </View>
+
+      <View style={styles.oauthRowContainer}>
+        <TouchableOpacity style={styles.oauthButtonHalf} onPress={handleGoogleSignIn} disabled={isLoading}>
+          <Ionicons name="logo-google" size={20} color="#EA4335" />
+          <Text style={styles.oauthButtonTextHalf}>Google</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.oauthButtonHalf} onPress={handleAppleSignIn} disabled={isLoading}>
+          <Ionicons name="logo-apple" size={20} color="#000000" />
+          <Text style={styles.oauthButtonTextHalf}>Apple</Text>
+        </TouchableOpacity>
+      </View>
+
       <TouchableOpacity 
         style={styles.loginLink} 
         onPress={() => setStep('signup')}
@@ -387,7 +444,7 @@ const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation, route }) => {
       <Text style={styles.title}>Forgot Password</Text>
       <Text style={styles.subtitle}>Enter your account email to receive a reset code</Text>
       <View style={styles.inputContainer}>
-        <Text style={styles.inputLabel}>Email</Text>
+        <Text style={styles.label}>Email</Text>
         <TextInput
           style={styles.input}
           value={email}
@@ -605,8 +662,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingHorizontal: scale(20),
+    paddingVertical: verticalScale(16),
     borderBottomWidth: 1,
     borderBottomColor: '#f0f0f0',
   },
@@ -615,68 +672,68 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
-    paddingTop: 40,
+    paddingHorizontal: scale(20),
+    paddingTop: verticalScale(40),
   },
   title: {
-    fontSize: 32,
+    fontSize: moderateScale(32),
     fontWeight: 'bold',
     color: '#000',
-    marginBottom: 32,
+    marginBottom: verticalScale(32),
   },
   subtitle: {
-    fontSize: 15,
+    fontSize: moderateScale(15),
     color: '#999',
-    marginBottom: 32,
-    marginTop: -24,
-    lineHeight: 22,
+    marginBottom: verticalScale(32),
+    marginTop: verticalScale(-24),
+    lineHeight: verticalScale(22),
   },
   inputContainer: {
-    marginBottom: 24,
+    marginBottom: verticalScale(24),
   },
   label: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     color: '#000',
-    marginBottom: 8,
+    marginBottom: verticalScale(8),
   },
   input: {
     backgroundColor: '#f8f8f8',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingHorizontal: scale(20),
+    paddingVertical: verticalScale(16),
+    borderRadius: scale(28),
     borderWidth: 1,
     borderColor: '#e0e0e0',
-    fontSize: 16,
+    fontSize: moderateScale(16),
     color: '#000',
   },
   passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f8f8f8',
-    borderRadius: 12,
+    borderRadius: scale(28),
     borderWidth: 1,
     borderColor: '#e0e0e0',
   },
   passwordInput: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    fontSize: 16,
+    paddingHorizontal: scale(16),
+    paddingVertical: verticalScale(16),
+    fontSize: moderateScale(16),
     color: '#000',
   },
   passwordToggle: {
-    paddingHorizontal: 16,
+    paddingHorizontal: scale(16),
   },
   signupButton: {
     backgroundColor: '#3B82F6',
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: verticalScale(16),
+    borderRadius: scale(28),
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: verticalScale(8),
   },
   signupButtonText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: '600',
   },
   signupButtonDisabled: {
@@ -684,14 +741,14 @@ const styles = StyleSheet.create({
   },
   loginButton: {
     backgroundColor: '#3B82F6',
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: verticalScale(16),
+    borderRadius: scale(28),
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: verticalScale(24),
   },
   loginButtonText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: '600',
   },
   loginButtonDisabled: {
@@ -699,10 +756,10 @@ const styles = StyleSheet.create({
   },
   loginLink: {
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: verticalScale(24),
   },
   loginLinkText: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     color: '#666',
   },
   loginLinkBold: {
@@ -711,38 +768,38 @@ const styles = StyleSheet.create({
   },
   forgotLinkContainer: {
     alignItems: 'flex-start',
-    marginTop: 2,
-    marginBottom: 8,
+    marginTop: verticalScale(2),
+    marginBottom: verticalScale(8),
   },
   forgotLinkText: {
     color: '#3B82F6',
-    fontSize: 14,
+    fontSize: moderateScale(14),
     fontWeight: '600',
   },
   otpContainer: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: verticalScale(32),
   },
   otpInput: {
-    fontSize: 32,
+    fontSize: moderateScale(32),
     fontWeight: 'bold',
     color: '#000',
     borderBottomWidth: 2,
     borderBottomColor: '#3B82F6',
-    paddingBottom: 8,
-    width: 200,
+    paddingBottom: verticalScale(8),
+    width: scale(200),
     letterSpacing: 8,
   },
   verifyButton: {
     backgroundColor: '#3B82F6',
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: verticalScale(16),
+    borderRadius: scale(28),
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: verticalScale(16),
   },
   verifyButtonText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: '600',
   },
   verifyButtonDisabled: {
@@ -753,42 +810,85 @@ const styles = StyleSheet.create({
   },
   resendButtonText: {
     color: '#3B82F6',
-    fontSize: 16,
+    fontSize: moderateScale(16),
   },
   voipContainer: {
     alignItems: 'center',
     backgroundColor: '#f8f8f8',
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-    borderRadius: 16,
-    marginBottom: 32,
+    paddingVertical: verticalScale(40),
+    paddingHorizontal: scale(20),
+    borderRadius: scale(16),
+    marginBottom: verticalScale(32),
   },
   voipNumber: {
-    fontSize: 24,
+    fontSize: moderateScale(24),
     fontWeight: 'bold',
     color: '#000',
-    marginTop: 16,
-    marginBottom: 8,
+    marginTop: verticalScale(16),
+    marginBottom: verticalScale(8),
   },
   voipDescription: {
-    fontSize: 14,
+    fontSize: moderateScale(14),
     color: '#666',
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: verticalScale(20),
   },
   assignButton: {
     backgroundColor: '#3B82F6',
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: verticalScale(16),
+    borderRadius: scale(28),
     alignItems: 'center',
   },
   assignButtonText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: moderateScale(18),
     fontWeight: '600',
   },
   assignButtonDisabled: {
     backgroundColor: '#ccc',
+  },
+  dividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: verticalScale(20),
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#e0e0e0',
+  },
+  dividerText: {
+    color: '#666',
+    paddingHorizontal: scale(12),
+    fontSize: moderateScale(14),
+  },
+  oauthRowContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: scale(12),
+    marginBottom: verticalScale(8),
+  },
+  oauthButtonHalf: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    paddingVertical: verticalScale(14),
+    borderRadius: scale(28),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  oauthButtonTextHalf: {
+    color: '#000',
+    fontSize: moderateScale(15),
+    fontWeight: '600',
+    marginLeft: 8,
   },
 });
 

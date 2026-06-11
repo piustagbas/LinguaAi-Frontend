@@ -1,7 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
+import * as Linking from 'expo-linking';
+import * as WebBrowser from 'expo-web-browser';
+import * as AppleAuthentication from 'expo-apple-authentication';
 import { authApi, userApi, UserData } from '../services/api';
-import { STORAGE_KEYS } from '../config/constants';
+import { STORAGE_KEYS, scopedKey } from '../config/constants';
 
 interface User {
   id: string;
@@ -29,6 +33,8 @@ interface AuthContextType {
   updateUser: () => Promise<void>;
   forgotPassword: (email: string) => Promise<void>;
   resetPassword: (email: string, code: string, password: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
+  loginWithApple: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -85,7 +91,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const clearStorage = async () => {
-    await AsyncStorage.multiRemove([STORAGE_KEYS.TOKEN, STORAGE_KEYS.USER]);
+    await AsyncStorage.multiRemove([
+      STORAGE_KEYS.TOKEN,
+      STORAGE_KEYS.USER,
+    ]);
+    setUser(null);
+  };
+
+  const clearAllData = async () => {
+    const uid = user?.id || 'anonymous';
+    await AsyncStorage.multiRemove([
+      STORAGE_KEYS.TOKEN,
+      STORAGE_KEYS.USER,
+      scopedKey(STORAGE_KEYS.MY_NUMBERS, uid),
+      scopedKey(STORAGE_KEYS.LOCAL_CALL_HISTORY, uid),
+      scopedKey(STORAGE_KEYS.ACTIVE_NUMBER_ID, uid),
+      scopedKey(STORAGE_KEYS.DIAL_NUMBER, uid),
+      scopedKey(STORAGE_KEYS.LANGUAGE_PREFERENCE, uid),
+      `@settings_notifications_${uid}`,
+      `@settings_auto_translate_${uid}`,
+      `@settings_dark_mode_${uid}`,
+      `@settings_preferred_languages_${uid}`,
+      `@settings_two_factor_${uid}`,
+      `@blocked_contacts_${uid}`,
+      `@recorded_voices_${uid}`,
+    ]);
     setUser(null);
   };
 
@@ -212,17 +242,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const response = await authApi.assignVoIPNumber();
       
-      if (response.status === 'success' && response.data?.voipNumber) {
-        const voipNumber = response.data.voipNumber;
+      if (response.status === 'success' && response.data) {
+        const numbers: string[] = response.data.numbers || [];
+        const activeNumber: string = response.data.activeNumber || numbers[0] || '';
         
-        // Update user with new VoIP number
-        if (user) {
-          const updatedUser = { ...user, voipNumber };
-          setUser(updatedUser);
-          await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updatedUser));
+        if (activeNumber) {
+          if (user) {
+            const updatedUser = { ...user, voipNumber: activeNumber };
+            setUser(updatedUser);
+            await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(updatedUser));
+          }
+          return activeNumber;
         }
-        
-        return voipNumber;
+        throw new Error('No number returned from server');
       } else {
         throw new Error(response.message || 'Failed to assign VoIP number');
       }
@@ -259,6 +291,94 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const loginWithGoogle = async () => {
+    setIsLoading(true);
+    try {
+      const returnUrl = Linking.createURL('/auth/callback');
+
+      const apiBaseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'http://10.0.2.2:5000/api';
+      const authUrl = `${apiBaseUrl}/auth/google?callback=${encodeURIComponent(returnUrl)}`;
+
+      const result = await WebBrowser.openAuthSessionAsync(authUrl, returnUrl);
+
+      if (result?.type !== 'success' || !result.url) {
+        console.log('🔐 AuthContext: Google Sign In cancelled or failed');
+        return;
+      }
+
+      const callbackUrl = new URL(result.url);
+      const token = callbackUrl.searchParams.get('token');
+
+      if (!token) {
+        throw new Error('No authentication token returned');
+      }
+
+      await AsyncStorage.setItem(STORAGE_KEYS.TOKEN, token);
+
+      const profileResponse = await userApi.getProfile();
+      if (profileResponse.status === 'success' && profileResponse.data?.user) {
+        await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(profileResponse.data.user));
+        setUser(profileResponse.data.user as User);
+        console.log('✅ AuthContext: Google Login Successful');
+      } else {
+        throw new Error('Failed to fetch user profile');
+      }
+    } catch (error: any) {
+      console.error('❌ AuthContext: Google Login error:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loginWithApple = async () => {
+    if (Platform.OS !== 'ios') {
+      console.log('🔐 AuthContext: Apple Sign In is only available on iOS');
+      throw new Error('Apple Sign In is only available on iOS devices');
+    }
+
+    setIsLoading(true);
+    try {
+      console.log('🔐 AuthContext: Starting Apple Login...');
+
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+
+      if (!credential.identityToken) {
+        throw new Error('No identity token returned from Apple');
+      }
+
+      console.log('✅ AuthContext: Got Apple identity token, sending to backend...');
+      const apiResponse = await authApi.appleLogin(credential.identityToken, {
+        fullName: credential.fullName,
+        email: credential.email ?? undefined,
+        user: credential.user,
+      });
+
+      if (apiResponse.status === 'success' && apiResponse.token && apiResponse.data?.user) {
+        await AsyncStorage.setItem(STORAGE_KEYS.TOKEN, apiResponse.token);
+        await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(apiResponse.data.user));
+        setUser(apiResponse.data.user as User);
+        console.log('✅ AuthContext: Apple Login Successful');
+      } else {
+        throw new Error(apiResponse.message || 'Apple login failed');
+      }
+    } catch (error: any) {
+      if (error.code === 'ERR_CANCELED' || error.code === 'CANCELED') {
+        console.log('🔐 AuthContext: Apple Sign In cancelled');
+        return;
+      }
+      console.error('❌ AuthContext: Apple Login error:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const value: AuthContextType = {
     user,
     isAuthenticated: !!user,
@@ -274,6 +394,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     updateUser,
     forgotPassword,
     resetPassword,
+    loginWithGoogle,
+    loginWithApple,
   };
 
   return (

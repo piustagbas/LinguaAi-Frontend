@@ -5,13 +5,15 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
-  SafeAreaView,
   Animated,
   Image,
+  StatusBar,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
+import { scale, verticalScale, moderateScale } from '../utils/responsive';
 
 const { width, height } = Dimensions.get('window');
 
@@ -22,6 +24,7 @@ interface OnboardingScreenProps {
 const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const { pendingEmail } = useAuth();
+  const { colors, isDark } = useTheme();
   const rotationAnim = useRef(new Animated.Value(0)).current;
 
   // If user has just registered and we have a pending email, jump to SignUp OTP
@@ -61,9 +64,10 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar hidden />
       <LinearGradient
-        colors={['#E8F0FE', '#F0F8FF', '#FFFFFF']}
+        colors={isDark ? ['#1C1C2E', '#0F0F0F', '#0F0F0F'] : ['#E8F0FE', '#F0F8FF', '#FFFFFF']}
         style={styles.gradient}
       >
         <View style={styles.content}>
@@ -91,25 +95,25 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
               >
                 <View style={styles.floatingIcon1}>
                   <View style={styles.translationIconContainer}>
-                    <Ionicons name="language" size={40} color="#3B82F6" />
+                    <Ionicons name="language" size={40} color={colors.primary} />
                   </View>
                 </View>
 
                 <View style={styles.floatingIcon2}>
                   <View style={styles.translationIconContainer2}>
-                    <Ionicons name="chatbubbles" size={35} color="#3B82F6" />
+                    <Ionicons name="chatbubbles" size={35} color={colors.primary} />
                   </View>
                 </View>
 
                 <View style={styles.floatingIcon3}>
                   <View style={styles.translationIconContainer3}>
-                    <Ionicons name="call" size={38} color="#3B82F6" />
+                    <Ionicons name="call" size={38} color={colors.primary} />
                   </View>
                 </View>
 
                 <View style={styles.floatingIcon4}>
                   <View style={styles.translationIconContainer4}>
-                    <Ionicons name="person" size={36} color="#3B82F6" />
+                    <Ionicons name="person" size={36} color={colors.primary} />
                   </View>
                 </View>
               </Animated.View>
@@ -117,10 +121,10 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
 
             {/* Text Content */}
             <View style={styles.textContainer}>
-              <Text style={styles.title}>
+              <Text style={[styles.title, { color: colors.text }]}>
                 Break Language Barriers{'\n'}Connect Globally
               </Text>
-              <Text style={styles.subtitle}>
+              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
                 Real-time translation for seamless{'\n'}communication across languages
               </Text>
             </View>
@@ -133,7 +137,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
               style={styles.skipButton}
               onPress={skipToSignUp}
             >
-              <Text style={styles.skipText}>Skip</Text>
+              <Text style={[styles.skipText, { color: colors.text }]}>Skip</Text>
             </TouchableOpacity>
 
             {/* Next Button */}
@@ -146,7 +150,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ navigation }) => {
         </View>
         </View>
       </LinearGradient>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -159,7 +163,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingTop: height * 0.03,
   },
   mainContent: {
     flex: 1,
@@ -172,7 +175,7 @@ const styles = StyleSheet.create({
     width: Math.min(width * 0.7, height * 0.35),
     height: Math.min(width * 0.7, height * 0.35),
     alignSelf: 'center',
-    marginTop: height * 0.02,
+    marginTop: height * 0.12,
     marginBottom: height * 0.02,
   },
   rotationContainer: {
@@ -210,29 +213,29 @@ const styles = StyleSheet.create({
   },
   translationIconContainer: {
     backgroundColor: 'rgba(59, 130, 246, 0.1)',
-    borderRadius: 30,
-    padding: 15,
+    borderRadius: scale(30),
+    padding: scale(15),
     borderWidth: 2,
     borderColor: '#3B82F6',
   },
   translationIconContainer2: {
     backgroundColor: 'rgba(59, 130, 246, 0.15)',
-    borderRadius: 25,
-    padding: 12,
+    borderRadius: scale(25),
+    padding: scale(12),
     borderWidth: 2,
     borderColor: '#3B82F6',
   },
   translationIconContainer3: {
     backgroundColor: 'rgba(59, 130, 246, 0.12)',
-    borderRadius: 28,
-    padding: 14,
+    borderRadius: scale(28),
+    padding: scale(14),
     borderWidth: 2,
     borderColor: '#3B82F6',
   },
   translationIconContainer4: {
     backgroundColor: 'rgba(59, 130, 246, 0.13)',
-    borderRadius: 26,
-    padding: 13,
+    borderRadius: scale(26),
+    padding: scale(13),
     borderWidth: 2,
     borderColor: '#3B82F6',
   },
@@ -244,7 +247,7 @@ const styles = StyleSheet.create({
     height: '50%',
     marginTop: '-25%',
     marginLeft: '-25%',
-    borderRadius: 1000,
+    borderRadius: scale(1000),
     borderWidth: 4,
     borderColor: '#FFD700',
     overflow: 'hidden',
@@ -261,18 +264,18 @@ const styles = StyleSheet.create({
     paddingBottom: height * 0.02,
   },
   title: {
-    fontSize: 22,
+    fontSize: moderateScale(22),
     fontWeight: 'bold',
     color: '#000',
     textAlign: 'center',
-    lineHeight: 28,
-    marginBottom: 12,
+    lineHeight: verticalScale(28),
+    marginBottom: verticalScale(12),
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     color: '#666',
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: verticalScale(22),
   },
   inlineIcon: {
     marginLeft: 8,
@@ -286,18 +289,18 @@ const styles = StyleSheet.create({
     paddingTop: height * 0.02,
   },
   skipButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingVertical: verticalScale(12),
+    paddingHorizontal: scale(20),
   },
   skipText: {
-    fontSize: 16,
+    fontSize: moderateScale(16),
     color: '#000',
     fontWeight: '500',
   },
   nextButton: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: scale(56),
+    height: verticalScale(56),
+    borderRadius: scale(28),
     backgroundColor: '#3B82F6',
     justifyContent: 'center',
     alignItems: 'center',

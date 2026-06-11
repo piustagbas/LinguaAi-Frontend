@@ -4,29 +4,38 @@
     "slug": "LinguaAICall",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/callgirl-icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
+    "scheme": "linguacall",
     "host": "localhost",
     "port": 8081,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/callgirl-removebg-preview.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#E8F0FE"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "usesAppleSignIn": true,
+      "bundleIdentifier": "com.linguacall.app"
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/callgirl-icon.png",
+        "backgroundColor": "#E8F0FE"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.linguacall.app"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
-    }
+      "favicon": "./assets/callgirl-removebg-preview.png"
+    },
+    "plugins": [
+      "expo-speech-recognition",
+      "expo-apple-authentication",
+      "expo-web-browser"
+    ]
   }
 }

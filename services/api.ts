@@ -58,6 +58,11 @@ export interface UserData {
   credits: number;
   isVerified: boolean;
   preferredLanguages?: string[];
+  numbers?: string[];
+  activeNumber?: string;
+  trialActive?: boolean;
+  trialStartDate?: string;
+  isPremium?: boolean;
 }
 
 // Auth API calls
@@ -91,7 +96,7 @@ export const authApi = {
   },
 
   assignVoIPNumber: async () => {
-    const response = await apiClient.post<ApiResponse<{ voipNumber: string }>>('/auth/assign-voip');
+    const response = await apiClient.post<ApiResponse<{ numbers: string[]; activeNumber: string }>>('/auth/assign-voip');
     return response.data;
   },
 
@@ -110,6 +115,27 @@ export const authApi = {
     });
     return response.data;
   },
+
+  changePassword: async (currentPassword: string, newPassword: string) => {
+    const response = await apiClient.put<ApiResponse>('/auth/change-password', {
+      currentPassword,
+      newPassword,
+    });
+    return response.data;
+  },
+
+  googleLogin: async (idToken: string) => {
+    const response = await apiClient.post<ApiResponse<{ user: UserData }>>('/auth/google', { idToken });
+    return response.data;
+  },
+
+  appleLogin: async (identityToken: string, userData?: { fullName?: any; email?: string; user?: string }) => {
+    const response = await apiClient.post<ApiResponse<{ user: UserData }>>('/auth/apple', {
+      identityToken,
+      user: userData,
+    });
+    return response.data;
+  },
 };
 
 // User API calls
@@ -121,6 +147,11 @@ export const userApi = {
 
   updateProfile: async (data: Partial<UserData>) => {
     const response = await apiClient.put<ApiResponse<{ user: UserData }>>('/user/profile', data);
+    return response.data;
+  },
+
+  deleteAccount: async () => {
+    const response = await apiClient.delete<ApiResponse>('/user/account');
     return response.data;
   },
 };
@@ -149,19 +180,48 @@ export const chatApi = {
 export const callApi = {
   initiateCall: async (phoneNumber: string, language: string) => {
     const response = await apiClient.post<ApiResponse>('/call/initiate', {
-      phoneNumber,
-      language,
+      receiverNumber: phoneNumber,
+      sourceLanguage: 'English',
+      targetLanguage: language,
     });
     return response.data;
   },
 
   getCallHistory: async () => {
-    const response = await apiClient.get<ApiResponse>('/call/history');
+    const response = await apiClient.get<ApiResponse>('/call');
     return response.data;
   },
 
   endCall: async (callId: string) => {
     const response = await apiClient.post<ApiResponse>(`/call/${callId}/end`);
+    return response.data;
+  },
+};
+
+// Numbers API calls
+export const numbersApi = {
+  getAvailable: async (country: string = 'US') => {
+    const response = await apiClient.get<ApiResponse>('/numbers/available', { params: { country } });
+    return response.data;
+  },
+
+  getMine: async () => {
+    const response = await apiClient.get<ApiResponse>('/numbers/mine');
+    return response.data;
+  },
+
+  addNumber: async (phoneNumber: string) => {
+    const response = await apiClient.post<ApiResponse>('/numbers/add', { phoneNumber });
+    return response.data;
+  },
+
+  switchNumber: async (phoneNumber: string) => {
+    const response = await apiClient.post<ApiResponse>('/numbers/switch', { phoneNumber });
+    return response.data;
+  },
+
+  removeNumber: async (phoneNumber: string) => {
+    const response = await apiClient.post<ApiResponse>('/numbers/remove', { phoneNumber });
     return response.data;
   },
 };
@@ -178,6 +238,76 @@ export const creditsApi = {
       amount,
     });
     return response.data;
+  },
+
+  getStatus: async () => {
+    const response = await apiClient.get<ApiResponse>('/payments/status');
+    return response.data;
+  },
+
+  subscribe: async () => {
+    const response = await apiClient.post<ApiResponse>('/payments/subscribe');
+    return response.data;
+  },
+
+  getPackages: async () => {
+    const response = await apiClient.get<ApiResponse>('/payments/packages');
+    return response.data;
+  },
+
+  createStripePayment: async (type: 'credits' | 'premium', packageId?: number) => {
+    const response = await apiClient.post<ApiResponse>('/payments/stripe', { type, packageId });
+    return response.data;
+  },
+
+  confirmStripePayment: async (paymentIntentId: string) => {
+    const response = await apiClient.post<ApiResponse>('/payments/stripe/confirm', { paymentIntentId });
+    return response.data;
+  },
+
+  createCryptoPayment: async (type: 'credits' | 'premium', packageId?: number) => {
+    const response = await apiClient.post<ApiResponse>('/payments/crypto', { type, packageId });
+    return response.data;
+  },
+
+  confirmCryptoPayment: async (chargeId: string) => {
+    const response = await apiClient.post<ApiResponse>('/payments/crypto/confirm', { chargeId });
+    return response.data;
+  },
+
+  getTransactions: async (page = 1, limit = 20) => {
+    const response = await apiClient.get<ApiResponse>(`/credit/transactions?page=${page}&limit=${limit}`);
+    return response.data;
+  },
+};
+
+// Voice API calls
+export const voiceApi = {
+  upload: async (audioUri: string, name: string): Promise<{ url: string; filename: string } | null> => {
+    try {
+      const formData = new FormData();
+      formData.append('audio', {
+        uri: audioUri,
+        type: 'audio/m4a',
+        name: `${name.replace(/\s+/g, '_')}.m4a`,
+      } as any);
+      formData.append('name', name);
+
+      const response = await apiClient.post<ApiResponse<{ url: string; filename: string; name: string }>>(
+        '/voices/upload',
+        formData,
+        {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          timeout: 30000,
+        },
+      );
+      if (response.data.status === 'success' && response.data.data) {
+        return response.data.data;
+      }
+      return null;
+    } catch {
+      return null;
+    }
   },
 };
 
